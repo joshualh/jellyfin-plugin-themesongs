@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
       - name: Build plugin
         run: dotnet publish Jellyfin.Plugin.ThemeSongs/Jellyfin.Plugin.ThemeSongs.csproj -c Release -o artifacts
       - name: Create release archive and repository manifest
@@ -21,11 +21,11 @@ jobs:
         run: |
           set -euo pipefail
           cd artifacts
-          zip -q ../ThemeSongs_10.11.0.2.zip Jellyfin.Plugin.ThemeSongs.dll
+          zip -q ../ThemeSongs_12.0.0.1.zip Jellyfin.Plugin.ThemeSongs.dll
           cd ..
           python3 - <<'PY'
           import hashlib,json,os,datetime
-          filename='ThemeSongs_10.11.0.2.zip'
+          filename='ThemeSongs_12.0.0.1.zip'
           checksum=hashlib.md5(open(filename,'rb').read()).hexdigest()
           repo=os.environ['REPO']
           manifest=[{
@@ -36,10 +36,10 @@ jobs:
             'owner':repo.split('/')[0],
             'category':'Metadata',
             'versions':[{
-              'version':'10.11.0.2',
+              'version':'12.0.0.1',
               'changelog':'Add per-library selection and scoped downloads.',
-              'targetAbi':'10.11.0.0',
-              'sourceUrl':f'https://github.com/{repo}/releases/download/v10.11.0.2/{filename}',
+              'targetAbi':'12.0.0.0',
+              'sourceUrl':f'https://github.com/{repo}/releases/download/v12.0.0.1/{filename}',
               'checksum':checksum,
               'timestamp':datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
             }]
@@ -49,7 +49,7 @@ jobs:
       - name: Release plugin
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create v10.11.0.2 ThemeSongs_10.11.0.2.zip --title 'Theme Songs 10.11.0.2 (Library Selection)' --notes 'Adds selectable TV series libraries. No libraries are enabled until configured.'
+        run: gh release create v12.0.0.1 ThemeSongs_12.0.0.1.zip --title 'Theme Songs 12.0.0.1 (Library Selection)' --notes 'Adds selectable TV series libraries. No libraries are enabled until configured.'
       - name: Publish repository manifest
         run: |
           git config user.name 'github-actions[bot]'
