@@ -1,0 +1,20 @@
+[
+  {
+    "guid": "afe1de9c-63e4-4692-8d8c-7c964df19eb2",
+    "name": "Theme Songs (Library Selection)",
+    "description": "Downloads theme songs for selected TV series libraries only.",
+    "overview": "Theme Songs with selectable Jellyfin libraries",
+    "owner": "joshualh",
+    "category": "Metadata",
+    "versions": [
+      {
+        "version": "10.11.0.2",
+        "changelog": "Add per-library selection and scoped downloads.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/joshualh/jellyfin-plugin-themesongs/releases/download/v10.11.0.2/ThemeSongs_10.11.0.2.zip",
+        "checksum": "bff01d7a7a392082eeeccd02cafc83cd",
+        "timestamp": "2026-11-23T10:18:01Z"
+      }
+    ]
+  }
+]
