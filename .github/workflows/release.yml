@@ -1,6 +1,8 @@
 name: Build and publish Jellyfin Theme Songs
 on:
   workflow_dispatch:
+  push:
+    branches: [master]
 permissions:
   contents: write
 jobs:
