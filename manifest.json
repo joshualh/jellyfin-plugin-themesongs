@@ -1,6 +1,6 @@
 [
   {
-    "guid": "afe1de9c-63e4-4692-8d8c-7c964df19eb2",
+    "guid": "73e32a6c-0e2a-4dbe-b836-89c427d71f05",
     "name": "Theme Songs (Library Selection)",
     "description": "Downloads theme songs for selected TV series libraries only.",
     "overview": "Theme Songs with selectable Jellyfin libraries",
@@ -8,12 +8,12 @@
     "category": "Metadata",
     "versions": [
       {
-        "version": "12.0.0.1",
+        "version": "12.0.0.2",
         "changelog": "Add per-library selection and scoped downloads.",
         "targetAbi": "12.0.0.0",
-        "sourceUrl": "https://github.com/joshualh/jellyfin-plugin-themesongs/releases/download/v12.0.0.1/ThemeSongs_12.0.0.1.zip",
-        "checksum": "8954632bbf3cd41e53b00157674924b2",
-        "timestamp": "2026-11-23T10:24:13Z"
+        "sourceUrl": "https://github.com/joshualh/jellyfin-plugin-themesongs/releases/download/v12.0.0.2/ThemeSongs_12.0.0.2.zip",
+        "checksum": "842d03e099ebf178709225dd63552e54",
+        "timestamp": "2026-11-23T10:25:58Z"
       }
     ]
   }
