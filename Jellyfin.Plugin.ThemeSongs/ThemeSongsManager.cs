@@ -3,49 +3,60 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Threading;
-using System.Threading.Tasks;
-using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
-using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Library;
-using MediaBrowser.Controller.Plugins;
 using MediaBrowser.Model.Entities;
 using Microsoft.Extensions.Logging;
 using Jellyfin.Data.Enums;
 
 namespace Jellyfin.Plugin.ThemeSongs
-
 {
-
-
     public class ThemeSongsManager : IDisposable
     {
         private readonly ILibraryManager _libraryManager;
-        private readonly Timer _timer;
         private readonly ILogger<ThemeSongsManager> _logger;
 
         public ThemeSongsManager(ILibraryManager libraryManager, ILogger<ThemeSongsManager> logger)
         {
             _libraryManager = libraryManager;
             _logger = logger;
-            _timer = new Timer(_ => OnTimerElapsed(), null, Timeout.Infinite, Timeout.Infinite);
         }
 
-        private IEnumerable<Series> GetSeriesFromLibrary()
+        private IEnumerable<Series> GetSelectedSeries()
         {
-            return _libraryManager.GetItemList(new InternalItemsQuery
+            var selectedIds = Plugin.Instance?.Configuration?.SelectedLibraryIds;
+            if (selectedIds == null || selectedIds.Count == 0)
             {
-                IncludeItemTypes = new[] {BaseItemKind.Series},
-                IsVirtualItem = false,
-                Recursive = true,
-            }).OfType<Series>();
-        }
+                _logger.LogInformation("No libraries selected. Theme song scan skipped.");
+                yield break;
+            }
 
-        private static string? GetConfiguredTemplate()
-        {
-            var configuredTemplate = Plugin.Instance?.Configuration?.ThemeSongUrlTemplate;
-            return string.IsNullOrWhiteSpace(configuredTemplate) ? null : configuredTemplate;
+            var seen = new HashSet<Guid>();
+            foreach (var idText in selectedIds)
+            {
+                if (!Guid.TryParse(idText, out var libraryId))
+                {
+                    _logger.LogWarning("Invalid selected Jellyfin library ID: {libraryId}", idText);
+                    continue;
+                }
+
+                _logger.LogInformation("Scanning theme songs in selected library {libraryId}", libraryId);
+                var series = _libraryManager.GetItemList(new InternalItemsQuery
+                {
+                    ParentId = libraryId,
+                    IncludeItemTypes = new[] { BaseItemKind.Series },
+                    IsVirtualItem = false,
+                    Recursive = true
+                }).OfType<Series>();
+
+                foreach (var item in series)
+                {
+                    if (seen.Add(item.Id))
+                    {
+                        yield return item;
+                    }
+                }
+            }
         }
 
         private bool TryBuildThemeSongUrl(Series series, string template, out string link)
@@ -57,87 +68,59 @@ namespace Jellyfin.Plugin.ThemeSongs
                 ("{imdbId}", series.GetProviderId(MetadataProvider.Imdb), "imdbId"),
                 ("{tmdbId}", series.GetProviderId(MetadataProvider.Tmdb), "tmdbId")
             };
-
-            var missingPlaceholders = new List<string>();
-
-            foreach (var replacement in replacements)
+            var missing = new List<string>();
+            foreach (var entry in replacements)
             {
-                if (!result.Contains(replacement.Placeholder, StringComparison.OrdinalIgnoreCase))
+                if (!result.Contains(entry.Placeholder, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (string.IsNullOrWhiteSpace(entry.Value))
                 {
+                    missing.Add(entry.Name);
                     continue;
                 }
-
-                if (string.IsNullOrWhiteSpace(replacement.Value))
-                {
-                    missingPlaceholders.Add(replacement.Name);
-                    continue;
-                }
-
-                result = result.Replace(replacement.Placeholder, replacement.Value, StringComparison.OrdinalIgnoreCase);
+                result = result.Replace(entry.Placeholder, entry.Value, StringComparison.OrdinalIgnoreCase);
             }
-
-            if (missingPlaceholders.Count > 0)
+            if (missing.Count > 0)
             {
-                _logger.LogInformation("Skipping theme song download for {seriesName}. Missing provider ids: {missingIds}", series.Name, string.Join(", ", missingPlaceholders));
+                _logger.LogInformation("Skipping theme song for {seriesName}: missing provider IDs {ids}", series.Name, string.Join(", ", missing));
                 link = string.Empty;
                 return false;
             }
-
             link = result;
             return true;
         }
 
-
         public void DownloadAllThemeSongs()
         {
-            var series = GetSeriesFromLibrary();
-            var template = GetConfiguredTemplate();
+            var template = Plugin.Instance?.Configuration?.ThemeSongUrlTemplate;
             if (string.IsNullOrWhiteSpace(template))
             {
                 _logger.LogInformation("Skipping theme song download: no URL template configured.");
                 return;
             }
 
-            foreach (var serie in series)
+            int success = 0, failed = 0, skipped = 0;
+            foreach (var series in GetSelectedSeries())
             {
-                if (!serie.GetThemeSongs().Any())
+                if (series.GetThemeSongs().Any()) { skipped++; continue; }
+                if (!TryBuildThemeSongUrl(series, template, out var link)) { skipped++; continue; }
+                var path = Path.Join(series.Path, "theme.mp3");
+                try
                 {
-                    if (!TryBuildThemeSongUrl(serie, template, out var link))
-                    {
-                        continue;
-                    }
-
-                    var themeSongPath = Path.Join(serie.Path, "theme.mp3");
-                    _logger.LogDebug("Trying to download {seriesName}, {link}", serie.Name, link);
-
-                    try
-                    {
-                        using var client = new WebClient();
-                        client.DownloadFile(link, themeSongPath);
-                        _logger.LogInformation("{seriesName} theme song successfully downloaded from {link}", serie.Name, link);
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogWarning(e, "Unable to download theme song for {seriesName} from {link}", serie.Name, link);
-                    }
+                    using var client = new WebClient();
+                    client.DownloadFile(link, path);
+                    success++;
+                    _logger.LogInformation("Downloaded theme song for {seriesName}", series.Name);
                 }
-            }        
+                catch (Exception ex)
+                {
+                    failed++;
+                    _logger.LogWarning(ex, "Unable to download theme song for {seriesName} from {url}", series.Name, link);
+                }
+            }
+            _logger.LogInformation("Theme song scan complete: {success} downloaded, {failed} failed, {skipped} skipped", success, failed, skipped);
         }
 
-
-        private void OnTimerElapsed()
-        {
-            // Stop the timer until next update
-            _timer.Change(Timeout.Infinite, Timeout.Infinite);
-        }
-
-        public Task RunAsync()
-        {
-            return Task.CompletedTask;
-        }
-
-        public void Dispose()
-        {
-        }
+        public void Dispose() { }
     }
 }

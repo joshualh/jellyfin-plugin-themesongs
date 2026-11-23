@@ -1,0 +1,57 @@
+name: Build and publish Jellyfin Theme Songs
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - name: Build plugin
+        run: dotnet publish Jellyfin.Plugin.ThemeSongs/Jellyfin.Plugin.ThemeSongs.csproj -c Release -o artifacts
+      - name: Create release archive and repository manifest
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          cd artifacts
+          zip -q ../ThemeSongs_10.11.0.2.zip Jellyfin.Plugin.ThemeSongs.dll
+          cd ..
+          python3 - <<'PY'
+          import hashlib,json,os,datetime
+          filename='ThemeSongs_10.11.0.2.zip'
+          checksum=hashlib.md5(open(filename,'rb').read()).hexdigest()
+          repo=os.environ['REPO']
+          manifest=[{
+            'guid':'afe1de9c-63e4-4692-8d8c-7c964df19eb2',
+            'name':'Theme Songs (Library Selection)',
+            'description':'Downloads theme songs for selected TV series libraries only.',
+            'overview':'Theme Songs with selectable Jellyfin libraries',
+            'owner':repo.split('/')[0],
+            'category':'Metadata',
+            'versions':[{
+              'version':'10.11.0.2',
+              'changelog':'Add per-library selection and scoped downloads.',
+              'targetAbi':'10.11.0.0',
+              'sourceUrl':f'https://github.com/{repo}/releases/download/v10.11.0.2/{filename}',
+              'checksum':checksum,
+              'timestamp':datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+            }]
+          }]
+          with open('manifest.json','w') as f: json.dump(manifest,f,indent=2)
+          PY
+      - name: Release plugin
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create v10.11.0.2 ThemeSongs_10.11.0.2.zip --title 'Theme Songs 10.11.0.2 (Library Selection)' --notes 'Adds selectable TV series libraries. No libraries are enabled until configured.'
+      - name: Publish repository manifest
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add manifest.json
+          git commit -m 'Publish Jellyfin plugin manifest'
+          git push
