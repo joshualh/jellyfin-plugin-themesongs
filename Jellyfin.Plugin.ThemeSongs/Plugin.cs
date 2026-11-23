@@ -17,14 +17,14 @@ namespace Jellyfin.Plugin.ThemeSongs
             Instance = this;
         }
 
-        public override string Name => "Theme Songs";
+        public override string Name => "Theme Songs (Library Selection)";
 
         public static Plugin Instance { get; private set; }
 
         public override string Description
             => "Downloads Theme Songs";
 
-        private readonly Guid _id = new Guid("afe1de9c-63e4-4692-8d8c-7c964df19eb2");
+        private readonly Guid _id = new Guid("73e32a6c-0e2a-4dbe-b836-89c427d71f05");
         public override Guid Id => _id;
 
         public IEnumerable<PluginPageInfo> GetPages()
@@ -33,7 +33,7 @@ namespace Jellyfin.Plugin.ThemeSongs
             {
                 new PluginPageInfo
                 {
-                    Name = "Theme Songs",
+                    Name = "Theme Songs (Library Selection)",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.configurationpage.html"
                 }
             };

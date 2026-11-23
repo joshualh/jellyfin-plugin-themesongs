@@ -21,25 +21,25 @@ jobs:
         run: |
           set -euo pipefail
           cd artifacts
-          zip -q ../ThemeSongs_12.0.0.1.zip Jellyfin.Plugin.ThemeSongs.dll
+          zip -q ../ThemeSongs_12.0.0.2.zip Jellyfin.Plugin.ThemeSongs.dll
           cd ..
           python3 - <<'PY'
           import hashlib,json,os,datetime
-          filename='ThemeSongs_12.0.0.1.zip'
+          filename='ThemeSongs_12.0.0.2.zip'
           checksum=hashlib.md5(open(filename,'rb').read()).hexdigest()
           repo=os.environ['REPO']
           manifest=[{
-            'guid':'afe1de9c-63e4-4692-8d8c-7c964df19eb2',
+            'guid':'73e32a6c-0e2a-4dbe-b836-89c427d71f05',
             'name':'Theme Songs (Library Selection)',
             'description':'Downloads theme songs for selected TV series libraries only.',
             'overview':'Theme Songs with selectable Jellyfin libraries',
             'owner':repo.split('/')[0],
             'category':'Metadata',
             'versions':[{
-              'version':'12.0.0.1',
+              'version':'12.0.0.2',
               'changelog':'Add per-library selection and scoped downloads.',
               'targetAbi':'12.0.0.0',
-              'sourceUrl':f'https://github.com/{repo}/releases/download/v12.0.0.1/{filename}',
+              'sourceUrl':f'https://github.com/{repo}/releases/download/v12.0.0.2/{filename}',
               'checksum':checksum,
               'timestamp':datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
             }]
@@ -49,7 +49,7 @@ jobs:
       - name: Release plugin
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create v12.0.0.1 ThemeSongs_12.0.0.1.zip --title 'Theme Songs 12.0.0.1 (Library Selection)' --notes 'Adds selectable TV series libraries. No libraries are enabled until configured.'
+        run: gh release create v12.0.0.2 ThemeSongs_12.0.0.2.zip --title 'Theme Songs 12.0.0.2 (Library Selection)' --notes 'Adds selectable TV series libraries. No libraries are enabled until configured.'
       - name: Publish repository manifest
         run: |
           git config user.name 'github-actions[bot]'
